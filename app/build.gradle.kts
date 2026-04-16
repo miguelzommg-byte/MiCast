@@ -32,8 +32,8 @@ android {
         applicationId = "io.github.jqssun.airplay"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.0.6"
+        versionCode = 7
+        versionName = "0.0.7"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -60,6 +60,11 @@ android {
         }
     }
 
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -72,6 +77,11 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+tasks.withType<Zip>().configureEach {
+    isReproducibleFileOrder = true
+    isPreserveFileTimestamps = false
 }
 
 // ensure submodules are initialised
