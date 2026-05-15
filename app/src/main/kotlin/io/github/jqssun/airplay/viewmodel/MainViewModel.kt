@@ -67,6 +67,9 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
     private val _autoStart = MutableStateFlow(prefs.getBoolean(Prefs.AUTO_START, Prefs.DEF_AUTO_START))
     val autoStart: StateFlow<Boolean> = _autoStart.asStateFlow()
 
+    private val _bootAutoStart = MutableStateFlow(prefs.getBoolean(Prefs.BOOT_AUTO_START, Prefs.DEF_BOOT_AUTO_START))
+    val bootAutoStart: StateFlow<Boolean> = _bootAutoStart.asStateFlow()
+
     private val _h265Enabled = MutableStateFlow(prefs.getBoolean(Prefs.H265_ENABLED, Prefs.DEF_H265_ENABLED))
     val h265Enabled: StateFlow<Boolean> = _h265Enabled.asStateFlow()
 
@@ -177,6 +180,7 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
     fun setServerPort(port: Int) { _serverPort.value = port; prefs.edit().putInt(Prefs.SERVER_PORT, port).apply() }
     fun setServerName(name: String) { _serverName.value = name; prefs.edit().putString(Prefs.SERVER_NAME, name).apply() }
     fun setAutoStart(v: Boolean) { _autoStart.value = v; prefs.edit().putBoolean(Prefs.AUTO_START, v).apply() }
+    fun setBootAutoStart(v: Boolean) { _bootAutoStart.value = v; prefs.edit().putBoolean(Prefs.BOOT_AUTO_START, v).apply() }
     fun setH265Enabled(v: Boolean) { _h265Enabled.value = v; prefs.edit().putBoolean(Prefs.H265_ENABLED, v).apply() }
     fun setEnforceSdr(v: Boolean) { _enforceSdr.value = v; prefs.edit().putBoolean(Prefs.ENFORCE_SDR, v).apply() }
     fun setSwAlacEnabled(v: Boolean) { _swAlacEnabled.value = v; prefs.edit().putBoolean(Prefs.SW_ALAC_ENABLED, v).apply() }
@@ -197,6 +201,7 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
     // Service binding
     fun bindService(svc: AirPlayService) {
         service = svc
+        updateFromService()
     }
 
     fun unbindService() {

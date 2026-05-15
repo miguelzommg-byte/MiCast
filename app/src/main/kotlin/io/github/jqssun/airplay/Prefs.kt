@@ -7,6 +7,7 @@ object Prefs {
     const val SERVER_NAME = "server_name"; const val DEF_SERVER_NAME = "Android AirPlay"
     const val SERVER_PORT = "server_port"; const val DEF_SERVER_PORT = 7000
     const val AUTO_START = "auto_start"; const val DEF_AUTO_START = true
+    const val BOOT_AUTO_START = "boot_auto_start"; const val DEF_BOOT_AUTO_START = true
     const val H265_ENABLED = "h265_enabled"; const val DEF_H265_ENABLED = true
     const val ENFORCE_SDR = "enforce_sdr"; const val DEF_ENFORCE_SDR = true
     const val ALAC_ENABLED = "alac_enabled"; const val DEF_ALAC_ENABLED = false

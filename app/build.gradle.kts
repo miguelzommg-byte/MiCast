@@ -32,8 +32,8 @@ android {
         applicationId = "io.github.jqssun.airplay"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.0.7"
+        versionCode = 8
+        versionName = "0.0.8"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
@@ -82,20 +82,6 @@ android {
 tasks.withType<Zip>().configureEach {
     isReproducibleFileOrder = true
     isPreserveFileTimestamps = false
-}
-
-// ensure submodules are initialised
-val initSubmodules by tasks.registering {
-    val marker = file("src/main/cpp/third_party/UxPlay/lib/raop.h")
-    onlyIf { !marker.exists() }
-    doLast {
-        exec { commandLine("git", "-C", rootProject.projectDir.absolutePath,
-            "submodule", "update", "--init", "--recursive") }
-    }
-}
-
-tasks.matching { it.name.startsWith("configureCMake") }.configureEach {
-    dependsOn(initSubmodules)
 }
 
 dependencies {

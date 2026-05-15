@@ -11,6 +11,7 @@ extern "C" {
 #include "raop.h"
 #include "dnssd.h"
 #include "logger.h"
+#include "pairing.h"
 #include "android_raop_callbacks.h"
 #include "android_dnssd_shim.h"
 }
@@ -88,7 +89,13 @@ Java_io_github_jqssun_airplay_bridge_NativeBridge_nativeInit(
     }
 
     if (requirePin) {
-        raop_set_plist(ctx->raop, "pin", 0);
+        /* avoid UxPlay's random-PIN retry path: use one random PIN for this server run */
+        int pin = random_pin();
+        if (pin < 0) {
+            LOGE("Failed to generate random pin");
+            pin = 1234;
+        }
+        raop_set_plist(ctx->raop, "pin", pin + 10000);
     }
 
     /* Init dnssd shim */

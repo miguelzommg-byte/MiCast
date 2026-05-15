@@ -6,6 +6,8 @@
     <string name="notification_channel">AirPlay Service</string>
     <string name="notification_title">AirPlay Server Running</string>
     <string name="notification_text">Accepting AirPlay connections</string>
+    <string name="notification_pin_title">AirPlay PIN Required</string>
+    <string name="notification_pin_text">PIN: %1$s</string>
     <string name="stop_service">Stop</string>
 
     <!-- Tabs -->
@@ -58,6 +60,8 @@
     <string name="setting_server_port_desc">Port for the AirPlay server</string>
     <string name="setting_auto_start">Start server automatically</string>
     <string name="setting_auto_start_desc">Start the AirPlay server when the app launches</string>
+    <string name="setting_boot_auto_start">Start server at boot</string>
+    <string name="setting_boot_auto_start_desc">Start the AirPlay server when the device starts</string>
     <string name="btn_save">Save</string>
 
     <!-- Settings: Connection -->

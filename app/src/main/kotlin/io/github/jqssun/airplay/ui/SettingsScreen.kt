@@ -45,6 +45,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val requirePin by viewModel.requirePin.collectAsState()
     val allowNewConn by viewModel.allowNewConn.collectAsState()
     val autoStart by viewModel.autoStart.collectAsState()
+    val bootAutoStart by viewModel.bootAutoStart.collectAsState()
     val serverPort by viewModel.serverPort.collectAsState()
     val audioLatencyMs by viewModel.audioLatencyMs.collectAsState()
     val swAlacEnabled by viewModel.swAlacEnabled.collectAsState()
@@ -109,6 +110,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
             description = stringResource(R.string.setting_auto_start_desc),
             checked = autoStart,
             onCheckedChange = { viewModel.setAutoStart(it) }
+        )
+
+        SettingSwitch(
+            title = stringResource(R.string.setting_boot_auto_start),
+            description = stringResource(R.string.setting_boot_auto_start_desc),
+            checked = bootAutoStart,
+            onCheckedChange = { viewModel.setBootAutoStart(it) }
         )
 
         SectionHeader(stringResource(R.string.section_connection))

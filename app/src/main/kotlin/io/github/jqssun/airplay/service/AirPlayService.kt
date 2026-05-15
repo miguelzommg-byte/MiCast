@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.graphics.BitmapFactory
 import android.os.Binder
 import android.os.Handler
@@ -22,6 +23,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.view.Surface
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.media.app.NotificationCompat as MediaNotificationCompat
 import io.github.jqssun.airplay.MainActivity
@@ -45,6 +47,7 @@ class AirPlayService : Service(), RaopCallbackHandler {
     private var nativeHandle = 0L
     private var nsdManager: NsdServiceManager? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var foregroundStarted = false
 
     val videoRenderer = VideoRenderer()
     val audioRenderer = AudioRenderer()
@@ -97,6 +100,7 @@ class AirPlayService : Service(), RaopCallbackHandler {
     var pinCallback: ((String?) -> Unit)? = null
         set(value) {
             field = value
+            // UI replay only: binding the activity must not mint a new native PIN.
             value?.invoke(_lastPin)
         }
 
@@ -161,9 +165,23 @@ class AirPlayService : Service(), RaopCallbackHandler {
         )
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_START_SERVER) {
+            promoteToForeground()
+            val prefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+            val name = prefs.getString(Prefs.SERVER_NAME, Prefs.DEF_SERVER_NAME)
+                    ?: Prefs.DEF_SERVER_NAME
+            startServer(name, ensureServiceStarted = false)
+            if (_serverState.value != ServerState.RUNNING) stopSelf(startId)
+        }
+        return START_NOT_STICKY
+    }
 
     fun startServer(name: String) {
+        startServer(name, ensureServiceStarted = true)
+    }
+
+    private fun startServer(name: String, ensureServiceStarted: Boolean) {
         if (_serverState.value == ServerState.RUNNING) return
         val name = name.ifBlank { Prefs.DEF_SERVER_NAME }
 
@@ -241,8 +259,10 @@ class AirPlayService : Service(), RaopCallbackHandler {
         nsdManager?.registerAirplay(serverName, port, airplayTxt)
 
         _serverState.value = ServerState.RUNNING
-        ContextCompat.startForegroundService(this, Intent(this, AirPlayService::class.java))
-        startForeground(NOTIFICATION_ID, buildNotification())
+        if (ensureServiceStarted) {
+            ContextCompat.startForegroundService(this, Intent(this, AirPlayService::class.java))
+        }
+        promoteToForeground()
         log("Server started on port $port")
     }
 
@@ -256,6 +276,10 @@ class AirPlayService : Service(), RaopCallbackHandler {
         wakeLock?.release()
         wakeLock = null
         _serverState.value = ServerState.ERROR
+        if (foregroundStarted) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foregroundStarted = false
+        }
     }
 
     fun stopServer() {
@@ -279,6 +303,7 @@ class AirPlayService : Service(), RaopCallbackHandler {
         _serverState.value = ServerState.STOPPED
         _connectionCount.value = 0
         stopForeground(STOP_FOREGROUND_REMOVE)
+        foregroundStarted = false
         stopSelf()
         log("Server stopped")
     }
@@ -340,17 +365,11 @@ class AirPlayService : Service(), RaopCallbackHandler {
         _connectionCount.value++
         log("Client connected (${_connectionCount.value})")
         if (!firstConnection) return
-        val prefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(Prefs.LAUNCH_ON_CONNECT, Prefs.DEF_LAUNCH_ON_CONNECT)) return
-        Handler(Looper.getMainLooper()).post {
-            val launchIntent =
-                    Intent(this, MainActivity::class.java)
-                            .addFlags(
-                                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            )
-            startActivity(launchIntent)
-        }
+        // conn_init is only a TCP pre-auth signal. PIN-required sessions must wait for
+        // onDisplayPin, otherwise the server UI can move before the client PIN is current.
+        if (requiresPin()) return
+        if (!shouldLaunchOnConnect()) return
+        launchMainActivity()
     }
 
     override fun onConnectionDestroy() {
@@ -370,8 +389,11 @@ class AirPlayService : Service(), RaopCallbackHandler {
     }
 
     override fun onDisplayPin(pin: String) {
+        // A new PIN is the sync point with the client prompt. Show every new value immediately.
+        if (_lastPin == pin) return
         _lastPin = pin
         pinCallback?.invoke(pin)
+        _updateMediaNotification()
     }
 
     override fun onMetadata(data: ByteArray) {
@@ -480,6 +502,7 @@ class AirPlayService : Service(), RaopCallbackHandler {
     private fun clearPin() {
         _lastPin = null
         pinCallback?.invoke(null)
+        _updateMediaNotification()
     }
 
     fun collectDebugInfo() =
@@ -535,6 +558,26 @@ class AirPlayService : Service(), RaopCallbackHandler {
         return _buildMediaNotification()
     }
 
+    private fun promoteToForeground() {
+        ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        )
+        foregroundStarted = true
+    }
+
+    private fun requiresPin(): Boolean {
+        val prefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(Prefs.REQUIRE_PIN, Prefs.DEF_REQUIRE_PIN)
+    }
+
+    private fun shouldLaunchOnConnect(): Boolean {
+        val prefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(Prefs.LAUNCH_ON_CONNECT, Prefs.DEF_LAUNCH_ON_CONNECT)
+    }
+
     private fun _buildMediaNotification(): Notification {
         val intent = Intent(this, MainActivity::class.java)
         val pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
@@ -574,10 +617,32 @@ class AirPlayService : Service(), RaopCallbackHandler {
                 )
             }
         } else {
-            builder.setContentTitle(getString(R.string.notification_title))
-                    .setContentText(getString(R.string.notification_text))
+            if (_lastPin != null) {
+                // Passive handoff only; do not launch/reorder the activity during PIN auth.
+                builder.setContentTitle(getString(R.string.notification_pin_title))
+                        .setContentText(getString(R.string.notification_pin_text, _lastPin))
+            } else {
+                builder.setContentTitle(getString(R.string.notification_title))
+                        .setContentText(getString(R.string.notification_text))
+            }
         }
         return builder.build()
+    }
+
+    private fun launchMainActivity() {
+        Handler(Looper.getMainLooper()).post {
+            val launchIntent =
+                    Intent(this, MainActivity::class.java)
+                            .addFlags(
+                                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            )
+            try {
+                startActivity(launchIntent)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to launch activity", e)
+            }
+        }
     }
 
     private fun _mediaAction(action: String): PendingIntent {
@@ -609,5 +674,6 @@ class AirPlayService : Service(), RaopCallbackHandler {
         const val ACTION_PLAY_PAUSE = "io.github.jqssun.airplay.PLAY_PAUSE"
         const val ACTION_NEXT = "io.github.jqssun.airplay.NEXT"
         const val ACTION_PREV = "io.github.jqssun.airplay.PREV"
+        const val ACTION_START_SERVER = "io.github.jqssun.airplay.START_SERVER"
     }
 }
