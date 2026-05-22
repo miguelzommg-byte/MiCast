@@ -26,14 +26,21 @@ class VideoRenderer {
     @Volatile var bitrateBps = 0L; private set
     @Volatile var frameCount = 0L; private set
     @Volatile var codecName = ""; private set
+    @Volatile var droppedFrames = 0L; private set
+    @Volatile var framePacingJitterUs = 0L; private set
 
     var enforceSdr = true
     var applyDeveloperMediaFormatKeys = false
     var keyAllowFrameDrop = true
     var realtimeDecoderPriority = false
+    var operatingRateHint = true
     private var _framesThisSec = 0
     private var _bytesThisSec = 0L
     private var _lastStatReset = 0L
+    private val _frameIntervalsNs = LongArray(120)
+    private var _frameIntervalIdx = 0
+    private var _frameIntervalCount = 0
+    private var _lastOutputFrameNs = 0L
 
     fun setResolution(w: Int, h: Int) {
         videoWidth = w
@@ -51,6 +58,7 @@ class VideoRenderer {
         if (now - _lastStatReset >= 1000) {
             fps = _framesThisSec
             bitrateBps = _bytesThisSec * 8
+            framePacingJitterUs = _computeFramePacingJitterUs()
             _framesThisSec = 0
             _bytesThisSec = 0
             _lastStatReset = now
@@ -98,6 +106,9 @@ class VideoRenderer {
             buf.clear()
             buf.put(data)
             c.queueInputBuffer(idx, 0, data.size, ntpTimeNs / 1000, 0)
+        } else {
+            droppedFrames++
+            Log.w(TAG, "Decoder input queue full; dropping frame. drops=$droppedFrames")
         }
     }
 
@@ -135,6 +146,9 @@ class VideoRenderer {
         if (applyDeveloperMediaFormatKeys && realtimeDecoderPriority) {
             format.setInteger(MediaFormat.KEY_PRIORITY, 0)
         }
+        if (applyDeveloperMediaFormatKeys && operatingRateHint && android.os.Build.VERSION.SDK_INT >= 23) {
+            format.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
+        }
         if (applyDeveloperMediaFormatKeys && android.os.Build.VERSION.SDK_INT >= 29) {
             format.setInteger(MediaFormat.KEY_ALLOW_FRAME_DROP, if (keyAllowFrameDrop) 1 else 0)
         }
@@ -150,6 +164,9 @@ class VideoRenderer {
 
     private fun stopCodec() {
         running = false
+        _frameIntervalIdx = 0
+        _frameIntervalCount = 0
+        _lastOutputFrameNs = 0L
         codec?.let {
             try {
                 it.stop()
@@ -165,6 +182,7 @@ class VideoRenderer {
         while (true) {
             val idx = c.dequeueOutputBuffer(info, 0)
             if (idx >= 0) {
+                _recordOutputFrameTime()
                 c.releaseOutputBuffer(idx, true) // render to surface
             } else {
                 break
@@ -176,7 +194,35 @@ class VideoRenderer {
         stopCodec()
         cachedKeyframe = null
         fps = 0; bitrateBps = 0; frameCount = 0; codecName = ""
+        droppedFrames = 0; framePacingJitterUs = 0
         _framesThisSec = 0; _bytesThisSec = 0
+        _frameIntervalIdx = 0; _frameIntervalCount = 0; _lastOutputFrameNs = 0L
+    }
+
+    private fun _recordOutputFrameTime() {
+        val now = System.nanoTime()
+        if (_lastOutputFrameNs > 0) {
+            _frameIntervalsNs[_frameIntervalIdx % _frameIntervalsNs.size] = now - _lastOutputFrameNs
+            _frameIntervalIdx++
+            _frameIntervalCount++
+        }
+        _lastOutputFrameNs = now
+    }
+
+    private fun _computeFramePacingJitterUs(): Long {
+        val count = _frameIntervalCount.coerceAtMost(_frameIntervalsNs.size)
+        if (count < 2) return 0
+
+        var sum = 0.0
+        var sumSq = 0.0
+        for (i in 0 until count) {
+            val interval = _frameIntervalsNs[i].toDouble()
+            sum += interval
+            sumSq += interval * interval
+        }
+        val mean = sum / count
+        val variance = (sumSq / count) - (mean * mean)
+        return (kotlin.math.sqrt(variance.coerceAtLeast(0.0)) / 1000.0).toLong()
     }
 
     companion object {

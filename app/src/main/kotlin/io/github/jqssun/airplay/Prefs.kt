@@ -14,6 +14,8 @@ object Prefs {
     const val ENFORCE_SDR = "enforce_sdr"; const val DEF_ENFORCE_SDR = true
     val KEY_ALLOW_FRAME_DROP: String = MediaFormat.KEY_ALLOW_FRAME_DROP; const val DEF_KEY_ALLOW_FRAME_DROP = true
     val KEY_PRIORITY: String = MediaFormat.KEY_PRIORITY; const val DEF_KEY_PRIORITY = true
+    val KEY_OPERATING_RATE: String = MediaFormat.KEY_OPERATING_RATE; const val DEF_KEY_OPERATING_RATE = false
+    const val AUDIO_BUFFER_MULTIPLIER = "audio_buffer_multiplier"; const val DEF_AUDIO_BUFFER_MULTIPLIER = 4
     const val ALAC_ENABLED = "alac_enabled"; const val DEF_ALAC_ENABLED = false
     const val SW_ALAC_ENABLED = "sw_alac_enabled"; const val DEF_SW_ALAC_ENABLED = true
     const val AAC_ENABLED = "aac_enabled"; const val DEF_AAC_ENABLED = true

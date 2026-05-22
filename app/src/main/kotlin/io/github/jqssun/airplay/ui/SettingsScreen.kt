@@ -53,6 +53,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val developerOptions by viewModel.developerOptions.collectAsState()
     val keyAllowFrameDrop by viewModel.keyAllowFrameDrop.collectAsState()
     val realtimeDecoderPriority by viewModel.realtimeDecoderPriority.collectAsState()
+    val operatingRateHint by viewModel.operatingRateHint.collectAsState()
+    val audioBufferMultiplier by viewModel.audioBufferMultiplier.collectAsState()
 
     Column(
         modifier = Modifier
@@ -300,6 +302,33 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 description = stringResource(R.string.setting_realtime_decoder_priority_desc),
                 checked = realtimeDecoderPriority,
                 onCheckedChange = { viewModel.setRealtimeDecoderPriority(it) }
+            )
+
+            SettingSwitch(
+                title = stringResource(R.string.setting_operating_rate_hint),
+                description = stringResource(R.string.setting_operating_rate_hint_desc),
+                checked = operatingRateHint,
+                onCheckedChange = { viewModel.setOperatingRateHint(it) }
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.setting_audio_buffer_multiplier)) },
+                supportingContent = { Text(stringResource(R.string.setting_audio_buffer_multiplier_desc)) }
+            )
+            var audioBufferSliderVal by remember(audioBufferMultiplier) {
+                mutableFloatStateOf(audioBufferMultiplier.toFloat())
+            }
+            ListItem(
+                headlineContent = {
+                    Slider(
+                        value = audioBufferSliderVal,
+                        onValueChange = { audioBufferSliderVal = it },
+                        onValueChangeFinished = { viewModel.setAudioBufferMultiplier(audioBufferSliderVal.roundToInt()) },
+                        valueRange = 4f..8f,
+                        steps = 3
+                    )
+                },
+                trailingContent = { Text(stringResource(R.string.setting_audio_buffer_multiplier_value, audioBufferSliderVal.roundToInt())) }
             )
 
             SettingSwitch(

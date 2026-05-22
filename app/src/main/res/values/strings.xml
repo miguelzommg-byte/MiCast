@@ -86,7 +86,7 @@
     <string name="setting_resolution_auto">Auto</string>
     <string name="setting_resolution_width">Width</string>
     <string name="setting_resolution_height">Height</string>
-    <string name="setting_max_fps">Max FPS</string>
+    <string name="setting_max_fps">Maximum FPS</string>
     <string name="setting_max_fps_desc">Maximum frame rate advertised to clients</string>
     <string name="setting_max_fps_placeholder">FPS</string>
     <string name="setting_overscanned">Overscanned</string>
@@ -112,11 +112,16 @@
 
     <!-- Settings: Developer -->
     <string name="setting_developer_options">Developer options</string>
-    <string name="setting_developer_options_desc">Show experimental decoder and debugging controls.</string>
+    <string name="setting_developer_options_desc">Show experimental options</string>
     <string name="setting_key_allow_frame_drop">MediaFormat.KEY_ALLOW_FRAME_DROP</string>
-    <string name="setting_key_allow_frame_drop_desc">Allow video decoders to drop frames internally to keep up on Android 10+.</string>
+    <string name="setting_key_allow_frame_drop_desc">Allow video decoders to drop frames internally to keep up on Android 10+</string>
     <string name="setting_realtime_decoder_priority">MediaFormat.KEY_PRIORITY</string>
-    <string name="setting_realtime_decoder_priority_desc">Request real-time scheduling for the video decoder.</string>
+    <string name="setting_realtime_decoder_priority_desc">Request real-time scheduling for video decoder</string>
+    <string name="setting_operating_rate_hint">MediaFormat.KEY_OPERATING_RATE</string>
+    <string name="setting_operating_rate_hint_desc">Request maximum operating rate for video decoder</string>
+    <string name="setting_audio_buffer_multiplier">Audio buffer size</string>
+    <string name="setting_audio_buffer_multiplier_desc">AudioTrack buffer size multiplier</string>
+    <string name="setting_audio_buffer_multiplier_value">%dx</string>
     <string name="setting_debug_overlay">Show debug overlay</string>
     <string name="setting_debug_overlay_desc">Display stats (bitrate, FPS, codec) over video</string>
 </resources>

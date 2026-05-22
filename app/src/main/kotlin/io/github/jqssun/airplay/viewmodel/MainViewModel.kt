@@ -26,6 +26,8 @@ data class DebugInfo(
     val videoFps: Int = 0,
     val videoBitrate: Long = 0,
     val videoFrames: Long = 0,
+    val droppedFrames: Long = 0,
+    val framePacingJitterUs: Long = 0,
     val audioCodec: String = "",
     val audioVolume: Int = 100,
     val connections: Int = 0,
@@ -34,12 +36,20 @@ data class DebugInfo(
         val kbps = videoBitrate / 1000
         return if (kbps >= 1000) "${"%.1f".format(kbps / 1000.0)} Mbps" else "$kbps Kbps"
     }
+    val jitterStr: String get() {
+        return if (framePacingJitterUs >= 1000) {
+            "${"%.1f".format(framePacingJitterUs / 1000.0)} ms"
+        } else {
+            "$framePacingJitterUs us"
+        }
+    }
 }
 
 @HiltViewModel
 class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app) {
 
     private val prefs = app.getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+    private val logFile = File(app.filesDir, "airplay_logs.txt")
     private var service: AirPlayService? = null
 
     private val _serverState = MutableStateFlow(ServerState.STOPPED)
@@ -94,6 +104,15 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
             )
     val realtimeDecoderPriority: StateFlow<Boolean> = _realtimeDecoderPriority.asStateFlow()
 
+    private val _operatingRateHint =
+            MutableStateFlow(
+                    prefs.getBoolean(
+                            Prefs.KEY_OPERATING_RATE,
+                            Prefs.DEF_KEY_OPERATING_RATE
+                    )
+            )
+    val operatingRateHint: StateFlow<Boolean> = _operatingRateHint.asStateFlow()
+
     private val _alacEnabled = MutableStateFlow(prefs.getBoolean(Prefs.ALAC_ENABLED, Prefs.DEF_ALAC_ENABLED))
     val alacEnabled: StateFlow<Boolean> = _alacEnabled.asStateFlow()
 
@@ -141,6 +160,15 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
             MutableStateFlow(prefs.getBoolean(Prefs.DEVELOPER_OPTIONS, Prefs.DEF_DEVELOPER_OPTIONS))
     val developerOptions: StateFlow<Boolean> = _developerOptions.asStateFlow()
 
+    private val _audioBufferMultiplier =
+            MutableStateFlow(
+                    prefs.getInt(
+                            Prefs.AUDIO_BUFFER_MULTIPLIER,
+                            Prefs.DEF_AUDIO_BUFFER_MULTIPLIER
+                    )
+            )
+    val audioBufferMultiplier: StateFlow<Int> = _audioBufferMultiplier.asStateFlow()
+
     private val _debugInfo = MutableStateFlow(DebugInfo())
     val debugInfo: StateFlow<DebugInfo> = _debugInfo.asStateFlow()
 
@@ -169,19 +197,27 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
         override fun initialValue() = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
     }
 
+    init {
+        loadPersistedLogs()
+    }
+
     fun addLog(msg: String) {
         val line = "${_dateFmt.get()!!.format(Date())} $msg"
         val snapshot: List<String>
         synchronized(_logLock) {
             _logList.add(line)
             while (_logList.size > 9999) _logList.removeAt(0)
+            persistLogsLocked()
             snapshot = _logList.toList()
         }
         _logs.value = snapshot
     }
 
     fun clearLogs() {
-        synchronized(_logLock) { _logList.clear() }
+        synchronized(_logLock) {
+            _logList.clear()
+            runCatching { logFile.delete() }
+        }
         _logs.value = emptyList()
     }
 
@@ -198,6 +234,25 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
         ctx.startActivity(Intent.createChooser(intent, "Export logs").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
+    private fun loadPersistedLogs() {
+        val snapshot: List<String>
+        synchronized(_logLock) {
+            val restored = runCatching {
+                if (logFile.exists()) logFile.readLines().takeLast(9999) else emptyList()
+            }.getOrDefault(emptyList())
+            _logList.clear()
+            _logList.addAll(restored)
+            snapshot = _logList.toList()
+        }
+        _logs.value = snapshot
+    }
+
+    private fun persistLogsLocked() {
+        runCatching {
+            logFile.writeText(_logList.joinToString("\n"))
+        }
+    }
+
     // Settings setters
     fun setServerPort(port: Int) { _serverPort.value = port; prefs.edit().putInt(Prefs.SERVER_PORT, port).apply() }
     fun setServerName(name: String) { _serverName.value = name; prefs.edit().putString(Prefs.SERVER_NAME, name).apply() }
@@ -212,6 +267,10 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
     fun setRealtimeDecoderPriority(v: Boolean) {
         _realtimeDecoderPriority.value = v
         prefs.edit().putBoolean(Prefs.KEY_PRIORITY, v).apply()
+    }
+    fun setOperatingRateHint(v: Boolean) {
+        _operatingRateHint.value = v
+        prefs.edit().putBoolean(Prefs.KEY_OPERATING_RATE, v).apply()
     }
     fun setSwAlacEnabled(v: Boolean) { _swAlacEnabled.value = v; prefs.edit().putBoolean(Prefs.SW_ALAC_ENABLED, v).apply() }
     fun setAlacEnabled(v: Boolean) { _alacEnabled.value = v; prefs.edit().putBoolean(Prefs.ALAC_ENABLED, v).apply() }
@@ -230,6 +289,11 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
     fun setDeveloperOptions(v: Boolean) {
         _developerOptions.value = v
         prefs.edit().putBoolean(Prefs.DEVELOPER_OPTIONS, v).apply()
+    }
+    fun setAudioBufferMultiplier(v: Int) {
+        val value = v.coerceIn(4, 8)
+        _audioBufferMultiplier.value = value
+        prefs.edit().putInt(Prefs.AUDIO_BUFFER_MULTIPLIER, value).apply()
     }
 
     // Service binding

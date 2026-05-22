@@ -17,6 +17,7 @@ class AudioRenderer {
     private var failedCt = -1
     private var swAlacHandle = 0L  // software ALAC decoder handle
     @Volatile var swAlacEnabled = true
+    @Volatile var audioBufferMultiplier = 4
     @Volatile var volume = 1.0f; private set
     @Volatile var codecLabel = ""; private set
 
@@ -153,7 +154,7 @@ class AudioRenderer {
             .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
             .build()
         val bufSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
-        track = AudioTrack(attrs, fmt, bufSize * 4, AudioTrack.MODE_STREAM, 0).also {
+        track = AudioTrack(attrs, fmt, bufSize * audioBufferMultiplier.coerceIn(4, 8), AudioTrack.MODE_STREAM, 0).also {
             it.setVolume(volume)
             it.play()
         }
