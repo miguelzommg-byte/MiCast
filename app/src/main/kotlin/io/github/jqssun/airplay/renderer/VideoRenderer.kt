@@ -30,10 +30,10 @@ class VideoRenderer {
     @Volatile var framePacingJitterUs = 0L; private set
 
     var enforceSdr = true
-    var applyDeveloperMediaFormatKeys = false
     var keyAllowFrameDrop = true
-    var realtimeDecoderPriority = false
-    var operatingRateHint = true
+    var realtimeDecoderPriority = true
+    var operatingRateHint = false
+    var scheduledOutputBufferRelease = true
     private var _framesThisSec = 0
     private var _bytesThisSec = 0L
     private var _lastStatReset = 0L
@@ -41,6 +41,9 @@ class VideoRenderer {
     private var _frameIntervalIdx = 0
     private var _frameIntervalCount = 0
     private var _lastOutputFrameNs = 0L
+    // anchors that map decoder PTS (us) to System.nanoTime() for scheduled rendering
+    private var _ptsBaseUs = Long.MIN_VALUE
+    private var _wallBaseNs = 0L
 
     fun setResolution(w: Int, h: Int) {
         videoWidth = w
@@ -143,13 +146,13 @@ class VideoRenderer {
             format.setInteger(MediaFormat.KEY_COLOR_RANGE, MediaFormat.COLOR_RANGE_LIMITED)
             format.setInteger(MediaFormat.KEY_COLOR_TRANSFER, MediaFormat.COLOR_TRANSFER_SDR_VIDEO)
         }
-        if (applyDeveloperMediaFormatKeys && realtimeDecoderPriority) {
+        if (realtimeDecoderPriority) {
             format.setInteger(MediaFormat.KEY_PRIORITY, 0)
         }
-        if (applyDeveloperMediaFormatKeys && operatingRateHint && android.os.Build.VERSION.SDK_INT >= 23) {
+        if (operatingRateHint && android.os.Build.VERSION.SDK_INT >= 23) {
             format.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
         }
-        if (applyDeveloperMediaFormatKeys && android.os.Build.VERSION.SDK_INT >= 29) {
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
             format.setInteger(MediaFormat.KEY_ALLOW_FRAME_DROP, if (keyAllowFrameDrop) 1 else 0)
         }
 
@@ -167,6 +170,8 @@ class VideoRenderer {
         _frameIntervalIdx = 0
         _frameIntervalCount = 0
         _lastOutputFrameNs = 0L
+        _ptsBaseUs = Long.MIN_VALUE
+        _wallBaseNs = 0L
         codec?.let {
             try {
                 it.stop()
@@ -183,7 +188,17 @@ class VideoRenderer {
             val idx = c.dequeueOutputBuffer(info, 0)
             if (idx >= 0) {
                 _recordOutputFrameTime()
-                c.releaseOutputBuffer(idx, true) // render to surface
+                if (scheduledOutputBufferRelease) {
+                    // schedule the frame at the VSYNC matching its NTP presentation time
+                    val ptsUs = info.presentationTimeUs
+                    if (_ptsBaseUs == Long.MIN_VALUE) {
+                        _ptsBaseUs = ptsUs
+                        _wallBaseNs = System.nanoTime()
+                    }
+                    c.releaseOutputBuffer(idx, _wallBaseNs + (ptsUs - _ptsBaseUs) * 1000L)
+                } else {
+                    c.releaseOutputBuffer(idx, true)
+                }
             } else {
                 break
             }

@@ -18,6 +18,7 @@ class AudioRenderer {
     private var swAlacHandle = 0L  // software ALAC decoder handle
     @Volatile var swAlacEnabled = true
     @Volatile var audioBufferMultiplier = 4
+    @Volatile var realtimeDecoderPriority = true
     @Volatile var volume = 1.0f; private set
     @Volatile var codecLabel = ""; private set
 
@@ -120,6 +121,10 @@ class AudioRenderer {
                 Log.w(TAG, "Unknown audio codec type: $ct")
                 return
             }
+        }
+
+        if (realtimeDecoderPriority) {
+            format.setInteger(MediaFormat.KEY_PRIORITY, 0)
         }
 
         try {

@@ -54,6 +54,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val keyAllowFrameDrop by viewModel.keyAllowFrameDrop.collectAsState()
     val realtimeDecoderPriority by viewModel.realtimeDecoderPriority.collectAsState()
     val operatingRateHint by viewModel.operatingRateHint.collectAsState()
+    val scheduledOutputBufferRelease by viewModel.scheduledOutputBufferRelease.collectAsState()
     val audioBufferMultiplier by viewModel.audioBufferMultiplier.collectAsState()
 
     Column(
@@ -253,13 +254,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
         )
 
         SettingSwitch(
-            title = stringResource(R.string.setting_enforce_sdr),
-            description = stringResource(R.string.setting_enforce_sdr_desc),
-            checked = enforceSdr,
-            onCheckedChange = { viewModel.setEnforceSdr(it) }
-        )
-
-        SettingSwitch(
             title = stringResource(R.string.setting_alac),
             description = stringResource(R.string.setting_alac_desc),
             checked = alacEnabled,
@@ -309,6 +303,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 description = stringResource(R.string.setting_operating_rate_hint_desc),
                 checked = operatingRateHint,
                 onCheckedChange = { viewModel.setOperatingRateHint(it) }
+            )
+
+            SettingSwitch(
+                title = stringResource(R.string.setting_scheduled_output_buffer_release),
+                description = stringResource(R.string.setting_scheduled_output_buffer_release_desc),
+                checked = scheduledOutputBufferRelease,
+                onCheckedChange = { viewModel.setScheduledOutputBufferRelease(it) }
+            )
+
+            SettingSwitch(
+                title = stringResource(R.string.setting_enforce_sdr),
+                description = stringResource(R.string.setting_enforce_sdr_desc),
+                checked = enforceSdr,
+                onCheckedChange = { viewModel.setEnforceSdr(it) }
             )
 
             ListItem(

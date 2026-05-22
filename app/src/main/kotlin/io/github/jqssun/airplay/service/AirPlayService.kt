@@ -211,26 +211,20 @@ class AirPlayService : Service(), RaopCallbackHandler {
         val h265 = prefs.getBoolean(Prefs.H265_ENABLED, Prefs.DEF_H265_ENABLED)
         val alac = prefs.getBoolean(Prefs.ALAC_ENABLED, Prefs.DEF_ALAC_ENABLED)
         val aac = prefs.getBoolean(Prefs.AAC_ENABLED, Prefs.DEF_AAC_ENABLED)
-        val developerOptions = prefs.getBoolean(Prefs.DEVELOPER_OPTIONS, Prefs.DEF_DEVELOPER_OPTIONS)
 
         audioRenderer.swAlacEnabled = prefs.getBoolean(Prefs.SW_ALAC_ENABLED, Prefs.DEF_SW_ALAC_ENABLED)
         audioRenderer.audioBufferMultiplier =
-                if (developerOptions) {
-                    prefs.getInt(
-                            Prefs.AUDIO_BUFFER_MULTIPLIER,
-                            Prefs.DEF_AUDIO_BUFFER_MULTIPLIER
-                    )
-                } else {
-                    Prefs.DEF_AUDIO_BUFFER_MULTIPLIER
-                }
+                prefs.getInt(Prefs.AUDIO_BUFFER_MULTIPLIER, Prefs.DEF_AUDIO_BUFFER_MULTIPLIER)
         videoRenderer.enforceSdr = prefs.getBoolean(Prefs.ENFORCE_SDR, Prefs.DEF_ENFORCE_SDR)
-        videoRenderer.applyDeveloperMediaFormatKeys = developerOptions
         videoRenderer.keyAllowFrameDrop =
                 prefs.getBoolean(Prefs.KEY_ALLOW_FRAME_DROP, Prefs.DEF_KEY_ALLOW_FRAME_DROP)
-        videoRenderer.realtimeDecoderPriority =
-                prefs.getBoolean(Prefs.KEY_PRIORITY, Prefs.DEF_KEY_PRIORITY)
+        val realtimePriority = prefs.getBoolean(Prefs.KEY_PRIORITY, Prefs.DEF_KEY_PRIORITY)
+        videoRenderer.realtimeDecoderPriority = realtimePriority
         videoRenderer.operatingRateHint =
                 prefs.getBoolean(Prefs.KEY_OPERATING_RATE, Prefs.DEF_KEY_OPERATING_RATE)
+        videoRenderer.scheduledOutputBufferRelease =
+                prefs.getBoolean(Prefs.SCHEDULED_OUTPUT_BUFFER_RELEASE, Prefs.DEF_SCHEDULED_OUTPUT_BUFFER_RELEASE)
+        audioRenderer.realtimeDecoderPriority = realtimePriority
         NativeBridge.nativeSetH265Enabled(nativeHandle, h265)
         NativeBridge.nativeSetCodecs(nativeHandle, alac, aac)
         NativeBridge.nativeSetPlist(nativeHandle, "maxFPS", maxFps)

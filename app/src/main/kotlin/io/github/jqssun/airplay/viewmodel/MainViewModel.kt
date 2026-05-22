@@ -113,6 +113,15 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
             )
     val operatingRateHint: StateFlow<Boolean> = _operatingRateHint.asStateFlow()
 
+    private val _scheduledOutputBufferRelease =
+            MutableStateFlow(
+                    prefs.getBoolean(
+                            Prefs.SCHEDULED_OUTPUT_BUFFER_RELEASE,
+                            Prefs.DEF_SCHEDULED_OUTPUT_BUFFER_RELEASE
+                    )
+            )
+    val scheduledOutputBufferRelease: StateFlow<Boolean> = _scheduledOutputBufferRelease.asStateFlow()
+
     private val _alacEnabled = MutableStateFlow(prefs.getBoolean(Prefs.ALAC_ENABLED, Prefs.DEF_ALAC_ENABLED))
     val alacEnabled: StateFlow<Boolean> = _alacEnabled.asStateFlow()
 
@@ -271,6 +280,10 @@ class MainViewModel @Inject constructor(app: Application) : AndroidViewModel(app
     fun setOperatingRateHint(v: Boolean) {
         _operatingRateHint.value = v
         prefs.edit().putBoolean(Prefs.KEY_OPERATING_RATE, v).apply()
+    }
+    fun setScheduledOutputBufferRelease(v: Boolean) {
+        _scheduledOutputBufferRelease.value = v
+        prefs.edit().putBoolean(Prefs.SCHEDULED_OUTPUT_BUFFER_RELEASE, v).apply()
     }
     fun setSwAlacEnabled(v: Boolean) { _swAlacEnabled.value = v; prefs.edit().putBoolean(Prefs.SW_ALAC_ENABLED, v).apply() }
     fun setAlacEnabled(v: Boolean) { _alacEnabled.value = v; prefs.edit().putBoolean(Prefs.ALAC_ENABLED, v).apply() }

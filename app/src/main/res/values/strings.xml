@@ -101,7 +101,7 @@
     <!-- Settings: Decode -->
     <string name="setting_h265">H.265 (HEVC)</string>
     <string name="setting_h265_desc">Enable H.265 video decoding if device supports it</string>
-    <string name="setting_enforce_sdr">Enforce SDR</string>
+    <string name="setting_enforce_sdr">MediaFormat.KEY_COLOR_TRANSFER</string>
     <string name="setting_enforce_sdr_desc">Tag video as limited SDR; disable to allow HDR sources to pass through</string>
     <string name="setting_alac">ALAC audio</string>
     <string name="setting_alac_desc">ALAC codec for AirPlay music streaming</string>
@@ -116,9 +116,11 @@
     <string name="setting_key_allow_frame_drop">MediaFormat.KEY_ALLOW_FRAME_DROP</string>
     <string name="setting_key_allow_frame_drop_desc">Allow video decoders to drop frames internally to keep up on Android 10+</string>
     <string name="setting_realtime_decoder_priority">MediaFormat.KEY_PRIORITY</string>
-    <string name="setting_realtime_decoder_priority_desc">Request real-time scheduling for video decoder</string>
+    <string name="setting_realtime_decoder_priority_desc">Request real-time scheduling for audio and video decoders</string>
     <string name="setting_operating_rate_hint">MediaFormat.KEY_OPERATING_RATE</string>
     <string name="setting_operating_rate_hint_desc">Request maximum operating rate for video decoder</string>
+    <string name="setting_scheduled_output_buffer_release">Aligned frame pacing</string>
+    <string name="setting_scheduled_output_buffer_release_desc">Schedule each decoded frame to the VSYNC matching its presentation timestamp</string>
     <string name="setting_audio_buffer_multiplier">Audio buffer size</string>
     <string name="setting_audio_buffer_multiplier_desc">AudioTrack buffer size multiplier</string>
     <string name="setting_audio_buffer_multiplier_value">%dx</string>
