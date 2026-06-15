@@ -39,10 +39,10 @@ fun LogsScreen(viewModel: MainViewModel) {
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = { viewModel.exportLogs() }) {
+            TextButton(onClick = { viewModel.exportLogs() }, modifier = Modifier.dpadFocus()) {
                 Text(stringResource(R.string.btn_export))
             }
-            TextButton(onClick = { viewModel.clearLogs() }) {
+            TextButton(onClick = { viewModel.clearLogs() }, modifier = Modifier.dpadFocus()) {
                 Text(stringResource(R.string.btn_clear))
             }
         }

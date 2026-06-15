@@ -5,7 +5,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
@@ -15,8 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -33,8 +38,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 
-private enum class Tab(val labelRes: Int) {
-    OVERVIEW(R.string.tab_overview), LOGS(R.string.tab_logs), SETTINGS(R.string.tab_settings)
+private enum class Tab(val labelRes: Int, val icon: ImageVector) {
+    OVERVIEW(R.string.tab_overview, Icons.Default.Cast),
+    LOGS(R.string.tab_logs, Icons.AutoMirrored.Filled.Article),
+    SETTINGS(R.string.tab_settings, Icons.Default.Settings)
 }
 
 @Composable
@@ -121,38 +128,23 @@ fun MainScreen(
         Scaffold(
             bottomBar = {
                 NavigationBar {
-                    NavigationBarItem(
-                        selected = tab == Tab.OVERVIEW,
-                        onClick = { tab = Tab.OVERVIEW },
-                        icon = { Icon(Icons.Default.Cast, null) },
-                        label = { Text(stringResource(Tab.OVERVIEW.labelRes)) }
-                    )
-                    NavigationBarItem(
-                        selected = tab == Tab.LOGS,
-                        onClick = { tab = Tab.LOGS },
-                        icon = { Icon(Icons.AutoMirrored.Filled.Article, null) },
-                        label = { Text(stringResource(Tab.LOGS.labelRes)) }
-                    )
-                    NavigationBarItem(
-                        selected = tab == Tab.SETTINGS,
-                        onClick = { tab = Tab.SETTINGS },
-                        icon = { Icon(Icons.Default.Settings, null) },
-                        label = { Text(stringResource(Tab.SETTINGS.labelRes)) }
-                    )
+                    Tab.entries.forEach { t ->
+                        NavigationBarItem(
+                            selected = tab == t,
+                            onClick = { tab = t },
+                            icon = { Icon(t.icon, null) },
+                            label = { Text(stringResource(t.labelRes)) },
+                            modifier = Modifier.dpadFocus()
+                        )
+                    }
                 }
             }
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
-                when (tab) {
-                    Tab.OVERVIEW -> OverviewContent(
-                        viewModel, onSurfaceAvailable, onSurfaceDestroyed,
-                        onFullscreen = { fullscreen = true },
-                        onPip = onPip,
-                        showAudioMode = audioOnly
-                    )
-                    Tab.LOGS -> LogsScreen(viewModel)
-                    Tab.SETTINGS -> SettingsScreen(viewModel)
-                }
+                TabContent(
+                    tab, viewModel, onSurfaceAvailable, onSurfaceDestroyed,
+                    onFullscreen = { fullscreen = true }, onPip = onPip, showAudioMode = audioOnly
+                )
             }
         }
     }
@@ -190,6 +182,26 @@ fun MainScreen(
 }
 
 @Composable
+private fun TabContent(
+    tab: Tab,
+    viewModel: MainViewModel,
+    onSurfaceAvailable: (android.view.Surface) -> Unit,
+    onSurfaceDestroyed: () -> Unit,
+    onFullscreen: () -> Unit,
+    onPip: () -> Unit,
+    showAudioMode: Boolean
+) {
+    when (tab) {
+        Tab.OVERVIEW -> OverviewContent(
+            viewModel, onSurfaceAvailable, onSurfaceDestroyed,
+            onFullscreen = onFullscreen, onPip = onPip, showAudioMode = showAudioMode
+        )
+        Tab.LOGS -> LogsScreen(viewModel)
+        Tab.SETTINGS -> SettingsScreen(viewModel)
+    }
+}
+
+@Composable
 private fun OverviewContent(
     viewModel: MainViewModel,
     onSurfaceAvailable: (android.view.Surface) -> Unit,
@@ -206,6 +218,11 @@ private fun OverviewContent(
     val idlePreview by viewModel.idlePreview.collectAsState()
     val debugEnabled by viewModel.debugEnabled.collectAsState()
     val debugInfo by viewModel.debugInfo.collectAsState()
+    val tv = isTv()
+    val startFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        if (tv) startFocus.requestFocus()
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // content area
@@ -250,13 +267,13 @@ private fun OverviewContent(
                 }
                 if (state == ServerState.RUNNING && connections > 0) {
                     Row(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
-                        IconButton(onClick = onPip) {
+                        IconButton(onClick = onPip, modifier = Modifier.dpadFocus()) {
                             Icon(
                                 painterResource(R.drawable.ic_pip), contentDescription = stringResource(R.string.cd_pip),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
-                        IconButton(onClick = onFullscreen) {
+                        IconButton(onClick = onFullscreen, modifier = Modifier.dpadFocus()) {
                             Icon(
                                 Icons.Default.Fullscreen, contentDescription = stringResource(R.string.cd_fullscreen),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -332,7 +349,8 @@ private fun OverviewContent(
                         onClick = {
                             if (state == ServerState.RUNNING) viewModel.stopServer()
                             else viewModel.startServer()
-                        }
+                        },
+                        modifier = Modifier.dpadFocus().focusRequester(startFocus)
                     ) {
                         Icon(
                             imageVector = if (state == ServerState.RUNNING) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -371,13 +389,13 @@ private fun FullscreenVideo(
             aspectRatio = aspectRatio
         )
         Row(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-            IconButton(onClick = onPip) {
+            IconButton(onClick = onPip, modifier = Modifier.dpadFocus()) {
                 Icon(
                     painterResource(R.drawable.ic_pip), contentDescription = stringResource(R.string.cd_pip),
                     tint = Color.White.copy(alpha = 0.7f)
                 )
             }
-            IconButton(onClick = onExitFullscreen) {
+            IconButton(onClick = onExitFullscreen, modifier = Modifier.dpadFocus()) {
                 Icon(
                     Icons.Default.FullscreenExit, contentDescription = stringResource(R.string.cd_exit_fullscreen),
                     tint = Color.White.copy(alpha = 0.7f)
@@ -504,19 +522,19 @@ private fun NowPlayingContent(viewModel: MainViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            IconButton(onClick = { viewModel.dacpPrev() }) {
+            IconButton(onClick = { viewModel.dacpPrev() }, modifier = Modifier.dpadFocus()) {
                 Icon(Icons.Default.SkipPrevious, stringResource(R.string.cd_previous), modifier = Modifier.size(36.dp))
             }
             FilledIconButton(
                 onClick = { viewModel.dacpPlayPause() },
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(56.dp).dpadFocus(CircleShape)
             ) {
                 Icon(
                     if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                     stringResource(R.string.cd_play_pause), modifier = Modifier.size(32.dp)
                 )
             }
-            IconButton(onClick = { viewModel.dacpNext() }) {
+            IconButton(onClick = { viewModel.dacpNext() }, modifier = Modifier.dpadFocus()) {
                 Icon(Icons.Default.SkipNext, stringResource(R.string.cd_next), modifier = Modifier.size(36.dp))
             }
         }

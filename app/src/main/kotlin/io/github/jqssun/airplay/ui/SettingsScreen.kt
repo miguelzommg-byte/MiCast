@@ -5,9 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -15,8 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -177,9 +179,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
         val needsOverlayPermission = launchOnConnect && !hasOverlayPermission
         ListItem(
-            modifier = if (needsOverlayPermission) {
-                Modifier.clickable { ctx.startActivity(_overlayIntent(ctx)) }
-            } else Modifier,
+            modifier = Modifier
+                .dpadFocus(RectangleShape)
+                .toggleable(
+                    value = launchOnConnect,
+                    role = Role.Switch,
+                    onValueChange = {
+                        viewModel.setLaunchOnConnect(it)
+                        if (it && !canAutoLaunch(ctx)) ctx.startActivity(_overlayIntent(ctx))
+                    }
+                ),
             headlineContent = { Text(stringResource(R.string.setting_launch_on_connect)) },
             supportingContent = {
                 Text(stringResource(
@@ -188,13 +197,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 ))
             },
             trailingContent = {
-                Switch(
-                    checked = launchOnConnect,
-                    onCheckedChange = {
-                        viewModel.setLaunchOnConnect(it)
-                        if (it && !canAutoLaunch(ctx)) ctx.startActivity(_overlayIntent(ctx))
-                    }
-                )
+                Switch(checked = launchOnConnect, onCheckedChange = null)
             }
         )
 
@@ -311,7 +314,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             onValueChange = { sliderVal = it },
                             onValueChangeFinished = { viewModel.setAudioLatencyMs(sliderVal.roundToInt()) },
                             valueRange = 0f..1000f,
-                            steps = 19
+                            steps = 19,
+                            modifier = Modifier.dpadFocus().dpadAdjust(
+                                onLeft = { viewModel.setAudioLatencyMs((audioLatencyMs - 50).coerceIn(0, 1000)) },
+                                onRight = { viewModel.setAudioLatencyMs((audioLatencyMs + 50).coerceIn(0, 1000)) }
+                            )
                         )
                     },
                     trailingContent = { Text(stringResource(R.string.audio_delay_value, sliderVal.roundToInt())) }
@@ -332,7 +339,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         onValueChange = { audioBufferSliderVal = it },
                         onValueChangeFinished = { viewModel.setAudioBufferMultiplier(audioBufferSliderVal.roundToInt()) },
                         valueRange = 4f..8f,
-                        steps = 3
+                        steps = 3,
+                        modifier = Modifier.dpadFocus().dpadAdjust(
+                            onLeft = { viewModel.setAudioBufferMultiplier((audioBufferMultiplier - 1).coerceIn(4, 8)) },
+                            onRight = { viewModel.setAudioBufferMultiplier((audioBufferMultiplier + 1).coerceIn(4, 8)) }
+                        )
                     )
                 },
                 trailingContent = { Text(stringResource(R.string.setting_audio_buffer_multiplier_value, audioBufferSliderVal.roundToInt())) }
@@ -406,13 +417,15 @@ private fun SettingResolution(
                                 width = ""; height = ""
                                 onValueChange(key)
                             },
-                            label = { Text(label) }
+                            label = { Text(label) },
+                            modifier = Modifier.dpadFocus()
                         )
                     }
                     FilterChip(
                         selected = !isPreset || editing,
                         onClick = { editing = true },
-                        label = { Text(stringResource(R.string.chip_custom)) }
+                        label = { Text(stringResource(R.string.chip_custom)) },
+                        modifier = Modifier.dpadFocus()
                     )
                 }
                 if (editing || !isPreset) {
@@ -487,13 +500,15 @@ private fun SettingChipField(
                                 text = ""
                                 onValueChange(key)
                             },
-                            label = { Text(label) }
+                            label = { Text(label) },
+                            modifier = Modifier.dpadFocus()
                         )
                     }
                     FilterChip(
                         selected = !isPreset || editing,
                         onClick = { editing = true },
-                        label = { Text(stringResource(R.string.chip_custom)) }
+                        label = { Text(stringResource(R.string.chip_custom)) },
+                        modifier = Modifier.dpadFocus()
                     )
                 }
                 if (editing || !isPreset) {
@@ -530,8 +545,11 @@ private fun SettingSwitch(
     onCheckedChange: (Boolean) -> Unit
 ) {
     ListItem(
+        modifier = Modifier
+            .dpadFocus(RectangleShape)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
         headlineContent = { Text(title) },
         supportingContent = { Text(description) },
-        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
+        trailingContent = { Switch(checked = checked, onCheckedChange = null) }
     )
 }
