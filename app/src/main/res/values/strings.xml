@@ -125,4 +125,12 @@
     <string name="setting_debug_overlay_desc">Overlay stream stats on video: codec, FPS, bitrate, jitter, frames, drops</string>
     <string name="setting_benchmark_log">Enable debug logging</string>
     <string name="setting_benchmark_log_desc">Log stream stats to logcat: codec, FPS, bitrate, jitter, frames, drops</string>
+    <!-- MiCast ambient screen -->
+    <string name="ready_headline">Ready when you are</string>
+    <string name="your_tv_name">Your TV\'s name: %1$s</string>
+    <string name="mirror_step_1">Swipe down from the top-right of your iPhone</string>
+    <string name="mirror_step_2">Tap Screen Mirroring</string>
+    <string name="mirror_step_3">Choose “%1$s”</string>
+    <string name="listening_for_iphones">Listening for iPhones</string>
+    <string name="press_start_hint">Press Start to turn on mirroring</string>
 </resources>
