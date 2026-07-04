@@ -6,7 +6,7 @@ import android.media.MediaFormat
 object Prefs {
     const val NAME = "settings"
 
-    const val SERVER_NAME = "server_name"; const val DEF_SERVER_NAME = "Android AirPlay"
+    const val SERVER_NAME = "server_name"; const val DEF_SERVER_NAME = "MiCast"
     const val SERVER_PORT = "server_port"; const val DEF_SERVER_PORT = 7000
     const val AUTO_START = "auto_start"; const val DEF_AUTO_START = true
     const val BOOT_AUTO_START = "boot_auto_start"; const val DEF_BOOT_AUTO_START = true
