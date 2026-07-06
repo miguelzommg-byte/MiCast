@@ -47,6 +47,18 @@ android {
         }
     }
 
+    signingConfigs {
+        getByName("debug") {
+            val dk = file("debug.keystore")
+            if (dk.exists()) {
+                storeFile = dk
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
