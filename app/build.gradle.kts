@@ -28,6 +28,18 @@ android {
         }
     }
 
+    val debugStore = rootProject.file("app/debug.keystore")
+    if (debugStore.exists()) {
+        signingConfigs {
+            create("debugSigning") {
+                storeFile = debugStore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "io.github.miguelzommgbyte.micast"
         minSdk = 24
@@ -66,6 +78,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfigs.findByName("debugSigning")?.let { signingConfig = it }
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
