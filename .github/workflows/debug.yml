@@ -13,6 +13,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Restore signing key
+        run: echo "${{ secrets.THE_MI }}" | base64 -d > app/debug.keystore
+
       - uses: actions/setup-java@v4
         with:
           distribution: "zulu"
