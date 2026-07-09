@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.jqssun.airplay.R
+import io.github.jqssun.airplay.ui.theme.MiCastTheme
 import io.github.jqssun.airplay.viewmodel.MainViewModel
 import androidx.compose.ui.res.stringResource
 import kotlin.math.roundToInt
@@ -66,6 +67,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(vertical = 8.dp)
     ) {
+        SectionHeader(stringResource(R.string.section_micast))
+        ThemePicker()
+        SettingSwitch(
+            title = stringResource(R.string.fix_audio_sync),
+            description = stringResource(R.string.fix_audio_sync_desc),
+            checked = audioLatencyMs >= 0,
+            onCheckedChange = { viewModel.setAudioLatencyMs(if (it) 250 else -1) }
+        )
+
         SectionHeader(stringResource(R.string.section_server))
 
         var nameText by remember(serverName) { mutableStateOf(serverName) }
@@ -551,5 +561,32 @@ private fun SettingSwitch(
         headlineContent = { Text(title) },
         supportingContent = { Text(description) },
         trailingContent = { Switch(checked = checked, onCheckedChange = null) }
+    )
+}
+
+
+@Composable
+private fun ThemePicker() {
+    val ctx = LocalContext.current
+    val current by MiCastTheme.current
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.setting_theme)) },
+        supportingContent = { Text(stringResource(R.string.setting_theme_desc)) },
+        trailingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = current == MiCastTheme.SUNSET,
+                    onClick = { MiCastTheme.set(ctx, MiCastTheme.SUNSET) },
+                    label = { Text(stringResource(R.string.theme_sunset)) },
+                    modifier = Modifier.dpadFocus()
+                )
+                FilterChip(
+                    selected = current == MiCastTheme.PLUM,
+                    onClick = { MiCastTheme.set(ctx, MiCastTheme.PLUM) },
+                    label = { Text(stringResource(R.string.theme_plum)) },
+                    modifier = Modifier.dpadFocus()
+                )
+            }
+        }
     )
 }
