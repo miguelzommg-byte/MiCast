@@ -133,4 +133,12 @@
     <string name="mirror_step_3">Choose “%1$s”</string>
     <string name="listening_for_iphones">Listening for iPhones</string>
     <string name="press_start_hint">Press Start to turn on mirroring</string>
+    <!-- MiCast settings section -->
+    <string name="section_micast">MiCast</string>
+    <string name="setting_theme">Look</string>
+    <string name="setting_theme_desc">Pick your color theme</string>
+    <string name="theme_sunset">Sunset</string>
+    <string name="theme_plum">Plum</string>
+    <string name="fix_audio_sync">Fix audio sync</string>
+    <string name="fix_audio_sync_desc">Delay the sound to match the video</string>
 </resources>
